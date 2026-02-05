@@ -1,0 +1,23 @@
+node_modules/
+dist/
+build/
+.env
+.DS_Store
+*.log
+*.cache
+coverage/
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*.bak
+*.tmp
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+# Optional: Ignore specific files or directories
+# public/

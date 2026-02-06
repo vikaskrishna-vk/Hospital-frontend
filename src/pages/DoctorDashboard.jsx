@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { appointmentAPI } from "../services/api";
 
 const DoctorDashboard = () => {
   const [appointments, setAppointments] = useState([]);
@@ -7,39 +8,46 @@ const DoctorDashboard = () => {
     totalPatients: 0,
     completedAppointments: 0,
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    // TODO: Fetch doctor's appointments and stats from API
-    // Mock data for now
-    setAppointments([
-      {
-        id: 1,
-        patientName: "John Doe",
-        time: "09:00 AM",
-        type: "Consultation",
-        status: "confirmed",
-      },
-      {
-        id: 2,
-        patientName: "Jane Smith",
-        time: "10:30 AM",
-        type: "Follow-up",
-        status: "pending",
-      },
-      {
-        id: 3,
-        patientName: "Bob Johnson",
-        time: "02:00 PM",
-        type: "Check-up",
-        status: "confirmed",
-      },
-    ]);
+    const fetchAppointments = async () => {
+      try {
+        setLoading(true);
+        const response = await appointmentAPI.getAll();
+        const allAppointments = response.data.data;
 
-    setStats({
-      todayAppointments: 8,
-      totalPatients: 45,
-      completedAppointments: 156,
-    });
+        // Filter appointments for today
+        const today = new Date().toISOString().split("T")[0];
+        const todayAppointments = allAppointments.filter(
+          (apt) => apt.appointmentDate === today,
+        );
+
+        // Calculate stats
+        const uniquePatients = new Set(
+          allAppointments.map((apt) => apt.patientId._id),
+        ).size;
+        const completedCount = allAppointments.filter(
+          (apt) => apt.status === "completed",
+        ).length;
+
+        setAppointments(todayAppointments);
+        setStats({
+          todayAppointments: todayAppointments.length,
+          totalPatients: uniquePatients,
+          completedAppointments: completedCount,
+        });
+        setError("");
+      } catch (err) {
+        console.error("Error fetching appointments:", err);
+        setError(err.response?.data?.message || "Failed to load appointments");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAppointments();
   }, []);
 
   return (
@@ -54,6 +62,12 @@ const DoctorDashboard = () => {
         </header>
         <main>
           <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            {error && (
+              <div className="px-4 py-4 mb-4 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            )}
+
             {/* Stats */}
             <div className="px-4 py-8 sm:px-0">
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
@@ -73,7 +87,7 @@ const DoctorDashboard = () => {
                             Today's Appointments
                           </dt>
                           <dd className="text-lg font-medium text-gray-900">
-                            {stats.todayAppointments}
+                            {loading ? "-" : stats.todayAppointments}
                           </dd>
                         </dl>
                       </div>
@@ -97,7 +111,7 @@ const DoctorDashboard = () => {
                             Total Patients
                           </dt>
                           <dd className="text-lg font-medium text-gray-900">
-                            {stats.totalPatients}
+                            {loading ? "-" : stats.totalPatients}
                           </dd>
                         </dl>
                       </div>
@@ -121,7 +135,7 @@ const DoctorDashboard = () => {
                             Completed Appointments
                           </dt>
                           <dd className="text-lg font-medium text-gray-900">
-                            {stats.completedAppointments}
+                            {loading ? "-" : stats.completedAppointments}
                           </dd>
                         </dl>
                       </div>
@@ -142,50 +156,62 @@ const DoctorDashboard = () => {
                     Your scheduled appointments for today
                   </p>
                 </div>
-                <ul className="divide-y divide-gray-200">
-                  {appointments.map((appointment) => (
-                    <li key={appointment.id}>
-                      <div className="px-4 py-4 sm:px-6">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <div className="flex-shrink-0 h-10 w-10">
-                              <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                                <span className="text-sm font-medium text-gray-700">
-                                  {appointment.patientName
-                                    .split(" ")
-                                    .map((n) => n[0])
-                                    .join("")}
-                                </span>
+                {loading ? (
+                  <div className="px-4 py-6 sm:px-6 text-center text-gray-500">
+                    Loading appointments...
+                  </div>
+                ) : appointments.length === 0 ? (
+                  <div className="px-4 py-6 sm:px-6 text-center text-gray-500">
+                    No appointments scheduled for today
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-gray-200">
+                    {appointments.map((appointment) => (
+                      <li key={appointment._id}>
+                        <div className="px-4 py-4 sm:px-6">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <div className="flex-shrink-0 h-10 w-10">
+                                <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                  <span className="text-sm font-medium text-gray-700">
+                                    {appointment.patientId.userId.name
+                                      .split(" ")
+                                      .map((n) => n[0])
+                                      .join("")}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {appointment.patientId.userId.name}
+                                </div>
+                                <div className="text-sm text-gray-500">
+                                  {appointment.type} • {appointment.startTime}
+                                </div>
                               </div>
                             </div>
-                            <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">
-                                {appointment.patientName}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {appointment.type} • {appointment.time}
-                              </div>
+                            <div className="flex items-center">
+                              <span
+                                className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                  appointment.status === "confirmed"
+                                    ? "bg-green-100 text-green-800"
+                                    : appointment.status === "pending"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-gray-100 text-gray-800"
+                                }`}
+                              >
+                                {appointment.status}
+                              </span>
+                              <button className="ml-3 inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                                View Details
+                              </button>
                             </div>
-                          </div>
-                          <div className="flex items-center">
-                            <span
-                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                                appointment.status === "confirmed"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-yellow-100 text-yellow-800"
-                              }`}
-                            >
-                              {appointment.status}
-                            </span>
-                            <button className="ml-3 inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
-                              View Details
-                            </button>
                           </div>
                         </div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
 

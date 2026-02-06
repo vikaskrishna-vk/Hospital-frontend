@@ -65,6 +65,8 @@ export const doctorAPI = {
   delete: (id) => api.delete(`/doctors/${id}`),
   getAppointments: (id, params) =>
     api.get(`/doctors/${id}/appointments`, { params }),
+  getProfile: () => api.get("/doctor/profile"),
+  updateProfile: (data) => api.post("/doctor/profile", data),
 };
 
 // Patient APIs
@@ -77,6 +79,8 @@ export const patientAPI = {
   getAppointments: (id, params) =>
     api.get(`/patients/${id}/appointments`, { params }),
   getMedicalHistory: (id) => api.get(`/patients/${id}/medical-history`),
+  getProfile: () => api.get("/patient/profile"),
+  updateProfile: (data) => api.post("/patient/profile", data),
 };
 
 // Appointment APIs
